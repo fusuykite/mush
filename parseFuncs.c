@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <unistd.h>
 #include "parse.h"
 
 /* Read in the command line argument and error check 
@@ -11,10 +12,9 @@
 int read_cmd_line(char *cmd_line) {
     int i = 0;
     int empty_ct = 0;
+
     if (fgets(cmd_line, MAX_CMD_LEN, stdin) == NULL) {
-        //fprintf(stderr, "%s", "invalid null command\n");
-        printf("HAHA\n");
-        return 1;
+        exit(EXIT_FAILURE);
     }
     /* Check the length of the command line */
     if (cmd_line[MAX_CMD_LEN - 1] != '\0') {
@@ -30,10 +30,11 @@ int read_cmd_line(char *cmd_line) {
            empty_ct++; 
         }
     }
+    
     if (empty_ct == 0) {
-        fprintf(stderr, "%s", "invalid null command\n");
         return 1;
     }
+
     return 0;
 }
 
