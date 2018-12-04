@@ -7,4 +7,6 @@
 #include <signal.h>
 #include <sys/types.h>
 
+#define STAGES 10
+
 void interrupt_handler(int signum);
