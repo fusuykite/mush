@@ -1,2 +1,0 @@
-# mush
-Project 6
