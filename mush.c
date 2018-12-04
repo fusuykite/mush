@@ -11,10 +11,11 @@
 
 
 int main(int argc, char *argv[]) {
+    int i = 0; /* Testing */
     int mush = 1;
     char cmd_line[MAX_CMD_LEN] = { 0 }; /* Cmd line delimited by spaces */
-    char cmd_line_cpy[MAX_CMD_LEN] = { 0 }; 
-    char *arg_token[MAX_CMD_LEN];  
+    char cmd_line_cpy[MAX_CMD_LEN] = { 0 }; /* Original line */
+    char *arg_token[MAX_CMD_LEN];  /* Delimited by spaces */
     char *pipe_token[MAX_CMD_PIPE];
     int *arg_count = calloc(1, sizeof(int));
     int *pipes = calloc(1, sizeof(int));
@@ -27,11 +28,13 @@ int main(int argc, char *argv[]) {
     sa_interrupt.sa_handler = &interrupt_handler;
 
     while (mush) {
-        /*
+
+        /* Signal handler */
         if (sigaction(SIGINT, &sa_interrupt, NULL) == -1) {
             perror("Error: ");
             return 1;
-        }*/
+        }
+
         printf("8-P ");
         
         /* Reads in the command line */
@@ -43,7 +46,6 @@ int main(int argc, char *argv[]) {
 
                 if (err_check_input(arg_token, *arg_count, *pipes) == 0) {
                     /* Break up based on stages */
-
                 }
             }
         }
