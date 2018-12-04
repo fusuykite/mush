@@ -56,15 +56,7 @@ int main(int argc, char *argv[]) {
             strcpy(cmd_line_cpy_y1, cmd_line_cpy);
             num_stages = make_stages(stages, cmd_line_cpy_y1, size_of);
     
-            /*printf("Stage: %d Argument: %d | '%s\n'", i, x, stages[1][2]);
-            printf("Stages: %d\n", num_stages);
-            for(i=0; i < num_stages; i++){ 
-                for(x=0; x < *(size_of[i]); x++){ 
-                        printf("Stage: %d Argument: %d | '%s\n'", i, x, stages[i][x]); 
-                }
-            }
-            */
-
+          
         }
 
         /* Shell resets itself */
