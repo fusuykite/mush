@@ -56,62 +56,54 @@ int make_stages(char ***stages, char *cmd_line_cpy_y1, int **size_of){
     return s;
 }
 
-/*function to redirect based off of token_list*/
-/*
-void redirect(char cmd_line_cpy_y1, int stage, int pipe_flag){
-	char *token;
-	int less_than = 0;
-	int more_than = 0;
-	int status;
+int pipe_setup(char **stages, int **size_of, int *pipes, int c_stages, int *read_pipe) {
+    /*Read is the past read call*/
+    int x, pip[2], write, ret = 0;
+    int exec_ret = 1;
+    
+    if(c_stages == (*pipes)) {
+        if(!(*read_pipe == 0)) {
+            dup2(*read_pipe, 0);
+        }
+        
+        ret = execl(stages[0], stages, NULL);
+        return ret;
+    }
+    else{
+        pipe(pip);
 
-	char *first;	
+        write = pip[1];
 
-	token = strtok(token_list[stage], " ");
-	first = token;
-	
-	while (token != NULL) {
-		
-		if strcmp(token, '<') {
-			less_than = 1;
-			close(0);
-			
-		}
-		
-		else if (strcmp(token, '>')) {
-			more_than = 1;
-			close(1);
-		}
-	
-		else if (less_than == 1) {	
-			open(token, "r");
-		}
+        ret = forker(write, read_pipe, stages);
 
-		else if (more_than == 1) {
-			open(token, "w");
-		}
-	
-		token = strtok(NULL, " ");
-	}
-	pid_t pid = fork();
+        *read_pipe = pip[0];
+    
+        close(write);
+    
+        return ret;
+    }
+}
 
-	if(pid == 0)	{	
-		execl(*first, *first, NULL);		
-		perror("Execl failed");
-		exit(1);
+int forker(int write, int *read_pipe, char **stages) {
 
-	}
+    pid_t pid = fork();
 
-	else {
-		waitpid(pid, &status, 0);
+    if(pid == 0){
+        if(!(*read_pipe == 0)){
+            dup2(*read_pipe, 0);
+            close(*read_pipe);
+        }
+    
+        if(!(write == 1)){
+            dup2(write, 1);
+            close(write);
+        }
+    
+        return execl(stages[0], stages, NULL);
+    }
 
-      if ( WIFEXITED(status)) {
-        int exit_status = WEXITSTATUS(status);
+    return pid;
+}
+        
 
-         if(exit_status){
-            perror("redirrect child process returned with error\n");
-				exit(1);
-         }
-      }
-	}
 
-}*/	
