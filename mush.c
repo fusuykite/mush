@@ -1,11 +1,5 @@
 //CREATED BY YUSUF BAHADUR AND ANDREW YAN
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <signal.h>
-#include <sys/types.h>
 #include "parse.h"
 #include "mush.h"
 
@@ -16,10 +10,17 @@ int main(int argc, char *argv[]) {
     char cmd_line[MAX_CMD_LEN] = { 0 }; /* Cmd line delimited by spaces */
     char cmd_line_cpy[MAX_CMD_LEN] = { 0 }; /* Original line */
     char *arg_token[MAX_CMD_LEN];  /* Delimited by spaces */
-    char *pipe_token[MAX_CMD_PIPE];
+    
+    char ***stages = (char ***)calloc(MAX_CMD_PIPE, sizeof(char **));
+    int **stage_arg = (int **)calloc(MAX_CMD_PIPE, sizeof(int *));
+
     int *arg_count = calloc(1, sizeof(int));
     int *pipes = calloc(1, sizeof(int));
     struct sigaction sa_interrupt;
+
+    int stdin_copy;
+    int stdout_copy;
+
     *arg_count = 0;
     *pipes = 0;
 
@@ -45,7 +46,8 @@ int main(int argc, char *argv[]) {
             if (token_args(arg_token, cmd_line, &arg_count, &pipes) == 0) {
 
                 if (err_check_input(arg_token, *arg_count, *pipes) == 0) {
-                    /* Break up based on stages */
+                    make_stages(stages, cmd_line_cpy, stage_arg);
+                    redirect(stages[0], *stage_arg[0], 0);
                 }
             }
         }

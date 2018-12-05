@@ -1,4 +1,6 @@
 //CREATED BY YUSUF BAHADUR AND ANDREW YAN
+#ifndef __MYPARSE__
+#define __MYPARSE__
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -9,6 +11,7 @@
 #define MAX_CMD_LEN 512
 #define MAX_CMD_PIPE 10
 #define MAX_CMD_ARG 10
+#define MAX_ARG_PER_STAGE 14
 
 /* ASCII defines */
 #define ASCII_PIPE 124
@@ -62,4 +65,4 @@ void too_many_args();
 
 
 
-
+#endif /* __MYPARSE__ */
