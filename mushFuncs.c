@@ -69,10 +69,10 @@ int redirect_and_pipe(char **stages, int **size_of, int *pipes, int c_stages,
     int pip[2];
     int write;
     int ret = 0;
-    if(c_stages == 0 || c_stages == *pipes){
-        for(i = 0; i < size_of[c_stages]; i++){
-            if((strcmp(stages[i], ">")) == 0){
-                if((fdout = open(stages[i+1], STDOUT_FILENO)) == -1){
+    if(c_stages == 0 || c_stages == *pipes) {
+        for(i = 0; i < size_of[c_stages]; i++) {
+            if((strcmp(stages[i], ">")) == 0) {
+                if((fdout = open(stages[i+1], STDOUT_FILENO)) == -1) {
                     return -1;
                 }
                 dup2(fdout, STDOUT_FILENO);;
@@ -89,7 +89,8 @@ int redirect_and_pipe(char **stages, int **size_of, int *pipes, int c_stages,
             }
         }
     }
-
+    
+    /*if last stage only set up input pipe and execl*/
     if(c_stages == (*pipes)) {
         if(!(*read_pipe == 0)) {
             dup2(*read_pipe, 0);
@@ -98,6 +99,7 @@ int redirect_and_pipe(char **stages, int **size_of, int *pipes, int c_stages,
         ret = execl(stages[0], stages, NULL);
         return ret;
     }
+    /*if not last stage*/
     else{
         pipe(pip);
 
@@ -117,13 +119,13 @@ int forker(int write, int *read_pipe, char **stages) {
 
     pid_t pid = fork();
 
-    if(pid == 0){
+    if(pid == 0) {
         if(!(*read_pipe == STDIN_FILENO)){
             dup2(*read_pipe, STDIN_FILENO);
             close(*read_pipe);
         }
     
-        if(!(write == STDOUT_FILENO)){
+        if(!(write == STDOUT_FILENO)) {
             dup2(write, STDOUT_FILENO);
             close(write);
         }
