@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <signal.h>
 #include <sys/types.h>
+#include "mush.h"
 
 void interrupt_handler(int signum) {
     printf("Can't kill me i'm a bad bitch\n");
@@ -56,11 +57,39 @@ int make_stages(char ***stages, char *cmd_line_cpy_y1, int **size_of){
     return s;
 }
 
-int pipe_setup(char **stages, int **size_of, int *pipes, int c_stages, int *read_pipe) {
+
+
+int redirect_and_pipe(char **stages, int **size_of, int *pipes, int c_stages, 
+    int *read_pipe) {
     /*Read is the past read call*/
-    int x, pip[2], write, ret = 0;
-    int exec_ret = 1;
     
+    int i = 0;                                                                  
+    int fdin;  
+    int fdout;
+    int pip[2];
+    int write;
+    int ret = 0;
+    if(c_stages == 0 || c_stages == *pipes){
+        for(i = 0; i < size_of[c_stages]; i++){
+            if((strcmp(stages[i], ">")) == 0){
+                if((fdout = open(stages[i+1], STDOUT_FILENO)) == -1){
+                    return -1;
+                }
+                dup2(fdout, STDOUT_FILENO);;
+                close(fdout);
+            }
+            
+            if((strcmp(stages[i], "<")) == 0) {
+                if((fdin = open(stages[i+1], STDIN_FILENO)) == -1) {
+                    *read_pipe = fdin;
+                    return -1;
+                }
+                dup2(fdin, STDIN_FILENO);
+                close(fdin);
+            }
+        }
+    }
+
     if(c_stages == (*pipes)) {
         if(!(*read_pipe == 0)) {
             dup2(*read_pipe, 0);
@@ -89,13 +118,13 @@ int forker(int write, int *read_pipe, char **stages) {
     pid_t pid = fork();
 
     if(pid == 0){
-        if(!(*read_pipe == 0)){
-            dup2(*read_pipe, 0);
+        if(!(*read_pipe == STDIN_FILENO)){
+            dup2(*read_pipe, STDIN_FILENO);
             close(*read_pipe);
         }
     
-        if(!(write == 1)){
-            dup2(write, 1);
+        if(!(write == STDOUT_FILENO)){
+            dup2(write, STDOUT_FILENO);
             close(write);
         }
     
