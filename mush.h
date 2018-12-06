@@ -10,3 +10,8 @@
 #define STAGES 10
 
 void interrupt_handler(int signum);
+int make_stages(char ***stages, char *cmd_line_cpy_y1, int **size_of);
+int redirect_and_pipe(char **stages, int **size_of, int *pipes, int c_stages, 
+    int *read_pipe);
+ int forker(int write, int *read_pipe, char **stages, int *fdin_flag, int fdin,
+             char ** argv);

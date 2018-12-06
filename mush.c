@@ -26,7 +26,10 @@ int main(int argc, char *argv[]) {
     int num_stages = 0; /* # of stages */
     int x, i = 0;
     int **size_of = (int **)calloc(STAGES, sizeof(int *));
-
+    int current_stage = 0;
+    int *read_pipe = calloc(1, sizeof(int));
+    *read_pipe = 0;
+    int allow = 1;
 
 
     /* Set up the signals */
@@ -50,11 +53,23 @@ int main(int argc, char *argv[]) {
 
                 if (err_check_input(arg_token, *arg_count, *pipes) == 0) {
                     /* Break up based on stages */
+                    make_stages(stages, cmd_line_cpy, size_of);
 
                 }
+                while(current_stage <= *pipes && allow != -1) {        
+
+                    printf("Current Stage in Main %d and Last read pipe: %d\n", current_stage, *read_pipe);
+                    fflush(stdout);
+
+                    allow = redirect_and_pipe(stages[current_stage], size_of,
+                             pipes, current_stage, read_pipe);
+                    
+                    
+                    printf("Before looping to next current stage in main %d\n\n", current_stage);
+                    fflush(stdout);
+                    current_stage ++;
+                }
             }
-            strcpy(cmd_line_cpy_y1, cmd_line_cpy);
-            num_stages = make_stages(stages, cmd_line_cpy_y1, size_of);
     
             /*printf("Stage: %d Argument: %d | '%s\n'", i, x, stages[1][2]);
             printf("Stages: %d\n", num_stages);
@@ -79,5 +94,4 @@ int main(int argc, char *argv[]) {
     free(arg_count);
     return 0;
     
-}
-        
+}        
