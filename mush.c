@@ -21,6 +21,8 @@ int main(int argc, char *argv[]) {
     int stdin_copy;
     int stdout_copy;
 
+    pid_t fork_result;
+
     *arg_count = 0;
     *pipes = 0;
 
@@ -37,6 +39,7 @@ int main(int argc, char *argv[]) {
         }
 
         printf("8-P ");
+        fflush(stdout);
         
         /* Reads in the command line */
         if (read_cmd_line(cmd_line) == 0) {
@@ -47,7 +50,14 @@ int main(int argc, char *argv[]) {
 
                 if (err_check_input(arg_token, *arg_count, *pipes) == 0) {
                     make_stages(stages, cmd_line_cpy, stage_arg);
-                    redirect(stages[0], *stage_arg[0], 0);
+                    if (cd_checker(stages[0], *stage_arg[0], *pipes) == 0) {
+                        for (i = 0; i <= *pipes; i++) {
+                            if (redirect(stages[i], *stage_arg[i], 0) == 0) {
+                                if (fork_test(stages[i], *stage_arg[i]) == 0) {
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

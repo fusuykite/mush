@@ -28,4 +28,8 @@ int change_directory(char *cd_stage);
 int make_stages(char ***stages, char *cmd_line, int **size_of);
 
 int redirect(char **stages, int num_arg, int pflag);
+
+int cd_checker(char **stages, int num_arg, int num_pipe);
+
+int fork_test(char **stages, int num_arg);
 #endif /* __MYMUSH__ */

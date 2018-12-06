@@ -5,3 +5,14 @@ Limits:
 Command line length: 512 bytes (this is including the null terminator)
 Commands in a pipeline: 10 commands
 Arguments to a command: 10 arguments
+
+Andrew Yan -
+    Helped with error checking.
+    Implemented CD command.
+    Implemented signals.
+    Helped with redirection.
+
+Yusuf Bahadur -
+    Helped with error checking.
+    Implemented pipes.
+    Implemented redirection.

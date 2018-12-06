@@ -13,9 +13,16 @@ int read_cmd_line(char *cmd_line) {
     int i = 0;
     int empty_ct = 0;
 
-    if (fgets(cmd_line, MAX_CMD_LEN, stdin) == NULL) {
+    /* Retrieve the line */
+    fgets(cmd_line, MAX_CMD_LEN, stdin);
+    
+    /* Check if CTRL + D is pressed */
+    if (feof(stdin)) {
+        printf("\n");
+        fflush(stdout);
         exit(EXIT_FAILURE);
     }
+
     /* Check the length of the command line */
     if (cmd_line[MAX_CMD_LEN - 1] != '\0') {
         fprintf(stderr, "%s", "Command Line too Long\n");
