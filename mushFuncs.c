@@ -27,10 +27,6 @@ int make_stages(char ***stages, char *cmd_line_cpy_y1, int **size_of){
     int i = 0;
     char *token;
 	
-    /*for(i = 0; i < 100; i++){
-        stages[i] = '\0';
-    } */
-	
     token = strtok(cmd_line_cpy_y1, " ");
 	stages[0] = (char **)calloc(100, sizeof(char *));
     size_of[0] = (int*)calloc(1, sizeof(int));
@@ -42,9 +38,6 @@ int make_stages(char ***stages, char *cmd_line_cpy_y1, int **size_of){
             ++s;
             stages[s] = (char **)calloc(100, sizeof(char));
             size_of[s] = (int *)calloc(1, sizeof(int));  
-            /*for(i = 0; i < 100; i++){
-                stages[s][i] = '\0';
-            }*/
             a = 0;
         }
 
@@ -52,7 +45,6 @@ int make_stages(char ***stages, char *cmd_line_cpy_y1, int **size_of){
             
             stages[s][a] = malloc(strlen(token) + 1);
             strcpy((stages[s][a]), token);
-            /*printf("Stage: %d, Argument: %d, %s\n",s, a, (stages[s][a]));*/
             ++a;
         }
         token = strtok(NULL, " ");
@@ -67,13 +59,12 @@ int make_stages(char ***stages, char *cmd_line_cpy_y1, int **size_of){
 
 int redirect_and_pipe(char **stages, int **size_of, int *pipes, int c_stages, 
     int *read_pipe) {
-    /*Retad is the past read call*/
     
-    int i = 0;                                                                  
-    int fdin;  
+    int i = 0;    
+    int fd = 0;                                                               
     int fdout;
     int pip[2];
-    int write;
+    
     int ret = 0;
     int *out_flag = calloc(1, sizeof(int));  
     *out_flag = 0;
@@ -81,13 +72,18 @@ int redirect_and_pipe(char **stages, int **size_of, int *pipes, int c_stages,
     int argc;
     char **argv = NULL;
     int num_arg;
+    int saved_stdin;
+    int saved_stdout;
 
+    /*save the original fd*/
+    saved_stdin = dup(0);
+    saved_stdout = dup(1);
+    
+    /*calculate the number of args for given stage */
     num_arg = *(size_of[c_stages]);
     argc = num_arg;
 
-    printf("Argv Maker Beginning");
-    fflush(stdout);
-
+    /*CODE TO SET UP ARGS WITHOUT > < "*/
     for (i = 0; i < num_arg; i++) {
         if (!strcmp(stages[i], "<")) {
             argc = argc - 2;
@@ -116,128 +112,119 @@ int redirect_and_pipe(char **stages, int **size_of, int *pipes, int c_stages,
         argv[argc] = NULL;
     } 
 
-   
-    printf("Beginning of Redirect\n");
-    fflush(stdout);
-    
+
+    /*CODE TO SET UP REDIRECTION */    
     if(c_stages == 0 || c_stages == *pipes) {
 
-        for(i = 0; i < *(size_of[c_stages]); i++) {
+        for(i = 0; i < num_arg; i++) {
 
             if((strcmp(stages[i], ">")) == 0) {
 
-                if((fdout = open(stages[i+1], O_RDWR | O_CREAT | O_TRUNC
+                if((fdout = open(stages[i+1], O_RDWR | O_CREAT | O_TRUNC, 0666
                 )) == -1) {
+                    fprintf(stderr, "%s: ", stages[i + 1]);
+                    perror(NULL);
                     return -1;
                 }
 
                 *out_flag = 1;
-                /*dup2(fdout, STDOUT_FILENO);;
-                close(fdout);*/
             }
             
             if((strcmp(stages[i], "<")) == 0) {
 
-                if((fdin = open(stages[i+1], O_RDONLY)) == -1) {
-
+                if((*read_pipe = open(stages[i+1], O_RDONLY, 0666)) == -1) {
+                    fprintf(stderr, "%s: ", stages[i + 1]);
+                    perror(NULL);
                     return -1;
                 }
 
-                *read_pipe = fdin;
-               /* dup2(fdin, STDIN_FILENO);
-                close(fdin);*/
             }
         }
     }
 
-    printf("After redirect\n");
-    fflush(stdout);
-    printf("# of pipes: %d\n", *pipes);
-    fflush(stdout);
-
-    /*if last stage only set up input pipe and execl*/
-
-    if(c_stages == (*pipes)) {
-        printf("inside compare last stage pipe\n");
-        fflush(stdout);
-
-        printf("Read Pipe: %d\n", *read_pipe);
-        fflush(stdout);
-
-        if((*read_pipe != STDIN_FILENO)) {
-            printf("Inside compare last stage pipe read pipe comp\n");
-            fflush(stdout);
-            dup2(*read_pipe, 0);
-            close(*read_pipe);
-        }
-
-        if(*out_flag == 1) {
-            dup2(fdout, STDOUT_FILENO);
-            close(fdout);
-        }
-
-        //printf("inside compare last stage pipe 2\n");
-        //fflush(stdout);
-        execvp(stages[0],argv);
-    }
-
-    else {
+    /*CODE TO BEGIN PIPING*/
+    if(c_stages <= (*pipes)){
  
-        pipe(pip);
+        if(pipe(pip) == -1) {
+            perror("Pipe Error");
+            return -1;
+        }
+        
+        /*function to start forking*/        
+        
+        ret = forker(pip[1], read_pipe, stages, out_flag, fdout, argv, 
+                    pipes, c_stages);
 
-        
-        printf("Before forker\n");
-        fflush(stdout);
-        
-        ret = forker(pip[1], read_pipe, stages, out_flag, fdout, argv);
-        
-        printf("After forker\n");
-        fflush(stdout);
-        *read_pipe = pip[0];
-        
-        printf("Read Pipe: %d\n", *read_pipe);
-        fflush(stdout);
-        printf("After setting read_pipe in redirect_pipe");
-        fflush(stdout);
+        /*close all extra file_descriptors*/
+        close(pip[1]);
+        close(fdout);
+        close(*read_pipe);
 
-        close(write);
-        printf("Before return to main\n");
-        fflush(stdout);
+        /*restore original file descriptors*/        
+        dup2(saved_stdin, 0);                                               
+        dup2(saved_stdout, 1); 
+        
+        /*close saved input output*/
+        close(saved_stdin);
+        close(saved_stdout);
 
-        return ret;
+        if(ret == -1) {
+            return -1;
+        }
+    
+        /*if not last pipe set *read_pipe to current pipe*/
+
+        if(c_stages == *pipes) {
+            return 1;
+        }
+    
+        else { 
+            *read_pipe = pip[0];
+            return 1;
+        }
+
+    }
+    /*error hit*/
+    else {
+        return -1;
     }
 }
 
 
-int forker(int write, int *read_pipe, char **stages, int *out_flag, int fdout, char **argv ) {
+int forker(int write, int *read_pipe, char **stages, int *out_flag, int fdout, 
+            char **argv, int *pipes, int c_stages ) {
 
     pid_t pid = fork();
     
-    printf("After Forking\n");
-    fflush(stdout);
-
-    if(pid == 0) {
-        if(!(*read_pipe == STDIN_FILENO)){
+    if(pid == -1) {
+        perror("Fork Error");
+        return -1;
+    }
+    
+    /*if child*/
+    else if(pid == 0) {
+        
+        if(!(*read_pipe == STDIN_FILENO)) {
             dup2(*read_pipe, STDIN_FILENO);
             close(*read_pipe);
         }
-        if(*out_flag == 1){
+        if(*out_flag == 1) {
             dup2(fdout, STDOUT_FILENO);
             close(fdout);
             *out_flag = 0;
         }
-        else if(!(write == STDOUT_FILENO)) {
-            dup2(write, STDOUT_FILENO);
-            close(write);
+        if(c_stages != (*pipes)) {
+            if(!(write == STDOUT_FILENO)) {
+                dup2(write, STDOUT_FILENO);
+                close(write);
+            }
         }
        
-        printf("Before execl in fork\n");
-        fflush(stdout);
-
         execvp(stages[0], argv);
-        fprintf(stderr, "%s: ", stages[0]);
-        perror(NULL);
 
+        printf("%s: ", argv[0]);
+        fflush(stdout);
+        perror(NULL);
     }
     
     return pid;

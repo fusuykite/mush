@@ -14,7 +14,7 @@ int read_cmd_line(char *cmd_line) {
     if (fgets(cmd_line, MAX_CMD_LEN, stdin) == NULL) {
         //fprintf(stderr, "%s", "invalid null command\n");
         printf("HAHA\n");
-        return 1;
+        exit(EXIT_FAILURE);
     }
     /* Check the length of the command line */
     if (cmd_line[MAX_CMD_LEN - 1] != '\0') {

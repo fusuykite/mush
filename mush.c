@@ -8,7 +8,8 @@
 #include <sys/types.h>
 #include "parse.h"
 #include "mush.h"
-
+#include <sys/stat.h> 
+#include <fcntl.h>
 
 int main(int argc, char *argv[]) {
     int mush = 1;
@@ -30,13 +31,20 @@ int main(int argc, char *argv[]) {
     int *read_pipe = calloc(1, sizeof(int));
     *read_pipe = 0;
     int allow = 1;
-
+    int fd = 0;
+    
 
     /* Set up the signals */
     memset(&sa_interrupt, 0, sizeof(sa_interrupt));
     sa_interrupt.sa_handler = &interrupt_handler;
 
     while (mush) {
+        current_stage = 0;
+        *read_pipe = 0;
+        allow = 1;
+        *pipes = 0;
+        *arg_count = 0;
+        num_stages = 0;
         /*
         if (sigaction(SIGINT, &sa_interrupt, NULL) == -1) {
             perror("Error: ");
@@ -58,17 +66,21 @@ int main(int argc, char *argv[]) {
                 }
                 while(current_stage <= *pipes && allow != -1) {        
 
-                    printf("Current Stage in Main %d and Last read pipe: %d\n", current_stage, *read_pipe);
-                    fflush(stdout);
+                    //printf("Current Stage in Main %d and Last read pipe: %d\n", current_stage, *read_pipe);
+                    //fflush(stdout);
 
                     allow = redirect_and_pipe(stages[current_stage], size_of,
                              pipes, current_stage, read_pipe);
                     
                     
-                    printf("Before looping to next current stage in main %d\n\n", current_stage);
-                    fflush(stdout);
+                    //printf("Before looping to next current stage in main %d\n\n", current_stage);
+                    //fflush(stdout);
                     current_stage ++;
                 }
+
+               // printf("OUT OF STAGE \n");
+                //fflush(stdout);
+
             }
     
             /*printf("Stage: %d Argument: %d | '%s\n'", i, x, stages[1][2]);
