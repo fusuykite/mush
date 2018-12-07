@@ -31,5 +31,10 @@ int redirect(char **stages, int num_arg, int pflag);
 
 int cd_checker(char **stages, int num_arg, int num_pipe);
 
-int fork_test(char **stages, int num_arg);
+int fork_test(char **stages, int num_arg, int **kid_pids, int cur_stage,
+int **in_pipe, int **out_pipe, int num_stages);
+
+int wait_kids(int **kid_pids, int num_kids);
+
+int pipe_test(char **stages, int num_arg);
 #endif /* __MYMUSH__ */

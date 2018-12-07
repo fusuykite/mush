@@ -84,7 +84,7 @@ int redirect(char **stages, int num_args, int pflag) {
             else if (!(strcmp(stages[i], "<"))) {
 
                 /* Call open on the arg after '<' */
-                if ((fdin = open(stages[i + 1], O_RDONLY)) == -1) {
+                if ((fdin = open(stages[i + 1], O_RDWR)) == -1) {
                     fprintf(stderr, "%s: ", stages[i + 1]);
                     perror(NULL);
                     return 1;
@@ -125,15 +125,16 @@ int cd_checker(char **stages, int num_arg, int num_pipe) {
     return 0;
 }
 
-int fork_test(char **stages, int num_arg) {
+int fork_test(char **stages, int num_arg, int **kid_pids, int cur_stage,
+int **in_pipe, int **out_pipe, int num_stages) {
     int i = 0;
     int idx_ct = 0;
     int argc = num_arg;
     int wait_int;
-    pid_t fork_result;
     char *cmd = stages[0];
-    /*char *argv[num_arg + 1]; */
     char **argv = NULL;
+    pid_t fork_result;
+    int pipe_fd[2];
     
     for (i = 0; i < num_arg; i++) {
         if (!strcmp(stages[i], "<")) {
@@ -162,6 +163,8 @@ int fork_test(char **stages, int num_arg) {
         }
         argv[argc] = NULL;
     }    
+
+    pipe(pipe_fd);
     
     if ((fork_result = fork()) == -1) {
         fprintf(stderr, "%s", "Fork has failed\n");
@@ -169,31 +172,36 @@ int fork_test(char **stages, int num_arg) {
     }
 
     else if (fork_result == 0) {
-        execvp(cmd, argv);
-        fprintf(stderr, "%s: ", stages[0]);
-        perror(NULL);
-        return 1;
+        if (redirect(stages, num_arg, 0) == 0) {
+            execvp(cmd, argv);
+            fprintf(stderr, "%s: ", stages[0]);
+            perror(NULL);
+            return 1;
+        }
     }
 
     else {
-        wait(&wait_int);
-        if (wait_int != 0) {
-            fprintf(stderr, "%s\n", "Process unsucessful");
-            return 1;
-        }
-        else {
-            printf("Proccess successful\n");
-            fflush(stdout);
-            return 0;
-        }
+        kid_pids[cur_stage] = &fork_result;
     }
-
     free(argv);
     return 0;
 }
     
-
-
+int wait_kids(int **kid_pids, int num_kids) {
+    int i = 0;
+    int wait_int;
+    for (i = 0; i < num_kids; i++) {
+        waitpid(*kid_pids[i], &wait_int, 0);
+        if (wait_int != 0) {
+            fprintf(stderr, "%s\n", "Process unsucessful");
+        }
+        else {
+            printf("Proccess successful\n");
+            fflush(stdout);
+        }
+    }
+    return 0;
+}
 
 
 

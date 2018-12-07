@@ -14,14 +14,13 @@ int main(int argc, char *argv[]) {
     char ***stages = (char ***)calloc(MAX_CMD_PIPE, sizeof(char **));
     int **stage_arg = (int **)calloc(MAX_CMD_PIPE, sizeof(int *));
 
+    pid_t *kid_pids[MAX_CMD_PIPE] = { 0 };
     int *arg_count = calloc(1, sizeof(int));
     int *pipes = calloc(1, sizeof(int));
     struct sigaction sa_interrupt;
 
-    int stdin_copy;
-    int stdout_copy;
-
-    pid_t fork_result;
+    int *pipe_in[1];
+    int *pipe_out[1];
 
     *arg_count = 0;
     *pipes = 0;
@@ -30,14 +29,13 @@ int main(int argc, char *argv[]) {
     memset(&sa_interrupt, 0, sizeof(sa_interrupt));
     sa_interrupt.sa_handler = &interrupt_handler;
 
+    /* Signal handler */
+    if (sigaction(SIGINT, &sa_interrupt, NULL) == -1) {
+        perror("Error: ");
+        return 1;
+    }
+
     while (mush) {
-
-        /* Signal handler */
-        if (sigaction(SIGINT, &sa_interrupt, NULL) == -1) {
-            perror("Error: ");
-            return 1;
-        }
-
         printf("8-P ");
         fflush(stdout);
         
@@ -52,11 +50,12 @@ int main(int argc, char *argv[]) {
                     make_stages(stages, cmd_line_cpy, stage_arg);
                     if (cd_checker(stages[0], *stage_arg[0], *pipes) == 0) {
                         for (i = 0; i <= *pipes; i++) {
-                            if (redirect(stages[i], *stage_arg[i], 0) == 0) {
-                                if (fork_test(stages[i], *stage_arg[i]) == 0) {
-                                }
-                            }
+                            if (fork_test(stages[i], *stage_arg[i], 
+                            kid_pids, i, pipe_in, pipe_out, *pipes + 1) != 0) {
+                                break;
+                            }   
                         }
+                        wait_kids(kid_pids, i);
                     }
                 }
             }
