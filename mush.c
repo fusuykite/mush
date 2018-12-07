@@ -95,14 +95,17 @@ int main(int argc, char *argv[]) {
         }
 
         /* Shell resets itself */
-        *arg_count = 0;
-        *pipes = 0;
         memset(arg_token, 0, MAX_CMD_LEN);
         memset(cmd_line, 0, MAX_CMD_LEN);
         memset(cmd_line_cpy, 0, MAX_CMD_LEN);
         fflush(stdout);
-    }
-    free(pipes);
+        freetp(stages, size_of, pipes, read_pipe);
+        free(arg_count);
+        *arg_count = 0;
+        *pipes = 0;
+        return 0;
+    }   
+    
     free(arg_count);
     return 0;
     

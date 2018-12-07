@@ -62,7 +62,7 @@ int redirect_and_pipe(char **stages, int **size_of, int *pipes, int c_stages,
     
     int i = 0;    
     int fd = 0;                                                               
-    int fdout;
+    int fdout = 1;
     int pip[2];
     
     int ret = 0;
@@ -154,7 +154,9 @@ int redirect_and_pipe(char **stages, int **size_of, int *pipes, int c_stages,
         
         ret = forker(pip[1], read_pipe, stages, out_flag, fdout, argv, 
                     pipes, c_stages);
-
+        
+        free(out_flag);
+        free(argv);
         /*close all extra file_descriptors*/
         close(pip[1]);
         close(fdout);
@@ -229,6 +231,27 @@ int forker(int write, int *read_pipe, char **stages, int *out_flag, int fdout,
     
     return pid;
 }
+    
+void freetp(char ***stages, int **size_of, int *pipes, int *read_pipe) {
         
+        int i = 0;
+        int x = 0;
+        for(i = 0; i <= *pipes; i++) {
+            for(x = 0; x < (*(size_of[i])); x++) {
+                free(stages[i][x]);
+            }
+            free(stages[i]);
+        }
+        free(stages);
 
+        for(i = 0; i <= *pipes; i++) {
+            free((size_of[i]));
+        }
+        free(size_of);
+        
+        free(pipes);
+        
+        free(read_pipe);
+}
+    
 
