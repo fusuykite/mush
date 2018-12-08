@@ -1,4 +1,4 @@
-//CREATED BY YUSUF BAHADUR AND ANDREW YAN
+/*CREATED BY YUSUF BAHADUR AND ANDREW YAN*/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -12,7 +12,7 @@ int read_cmd_line(char *cmd_line) {
     int i = 0;
     int empty_ct = 0;
     if (fgets(cmd_line, MAX_CMD_LEN, stdin) == NULL) {
-        //fprintf(stderr, "%s", "invalid null command\n");
+        
         printf("HAHA\n");
         return 1;
     }
