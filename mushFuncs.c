@@ -1,34 +1,37 @@
-//CREATED BY YUSUF BAHADUR AND ANDREW YAN
+/*CREATED BY YUSUF BAHADUR AND ANDREW YAN*/
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <signal.h>
-#include <sys/types.h>
+#include "parse.h"
 #include "mush.h"
-#include <unistd.h>
-#include <fcntl.h>
 
-
-#define STDOUT_FILENO 1
-#define STDIN_FILENO 0
-
+/* Handles ^C sigint interrupt */
 void interrupt_handler(int signum) {
     printf("Can't kill me i'm a bad bitch\n");
     fflush(stdout);
 }
 
 
+/* Changing directory */
+int change_directory(char *path) {
+    DIR *d;
+    if ((d = opendir(path)) == NULL) {
+        perror(path);
+        return 1;
+    }
+    else {
+        chdir(path);
+    }
+    return 0;
+}
 
-int make_stages(char ***stages, char *cmd_line_cpy_y1, int **size_of){
+int make_stages(char ***stages, char *cmd_line, int **size_of){
     int s = 0;
     int a = 0;
     int i = 0;
     char *token;
-	
-    token = strtok(cmd_line_cpy_y1, " ");
-	stages[0] = (char **)calloc(100, sizeof(char *));
+    
+   
+    token = strtok(cmd_line, " ");
+    stages[0] = (char **)calloc(100, sizeof(char *));
     size_of[0] = (int*)calloc(1, sizeof(int));
 
     while(token != NULL) {
@@ -38,6 +41,7 @@ int make_stages(char ***stages, char *cmd_line_cpy_y1, int **size_of){
             ++s;
             stages[s] = (char **)calloc(100, sizeof(char));
             size_of[s] = (int *)calloc(1, sizeof(int));  
+            
             a = 0;
         }
 
@@ -56,9 +60,52 @@ int make_stages(char ***stages, char *cmd_line_cpy_y1, int **size_of){
 }
 
 
+/* Checks if the first argument is cd 
+ *  * returns 1 on error of if the directory is changed
+ *   * returns 0 if first argument is not cd */
+
+int cd_checker(char **stages, int num_arg, int num_pipe) {
+    int i = 0;
+    
+    if (!strcmp(stages[0], "cd")) {
+        if (num_pipe != 0) {
+            fprintf(stderr, "%s: too many arguments.\n", stages[0]);
+            return 1;
+        }
+        if (num_arg > 2) {
+            fprintf(stderr, "%s: too many arguments.\n", stages[0]);
+            return 1;
+        }
+        else if (num_arg == 1) {
+            fprintf(stderr, "%s: missing argument.\n", stages[0]);
+            return 1;
+        }
+        else {
+            change_directory(stages[1]);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+    
+int wait_kids(int **kid_pids, int num_kids) {
+    int i = 0;
+    int wait_int;
+    for (i = 0; i < num_kids; i++) {
+        waitpid(*kid_pids[i], &wait_int, 0);
+        if (wait_int != 0) {
+            /* Do something */
+        }
+        else {
+            /* Do something */
+        }
+    }
+    return 0;
+}
 
 int redirect_and_pipe(char **stages, int **size_of, int *pipes, int c_stages, 
-    int *read_pipe) {
+    int *read_pipe, int **kid_pids) {
     
     int i = 0;    
     int fd = 0;                                                               
@@ -153,11 +200,11 @@ int redirect_and_pipe(char **stages, int **size_of, int *pipes, int c_stages,
         /*function to start forking*/        
         
         ret = forker(pip[1], read_pipe, stages, out_flag, fdout, argv, 
-                    pipes, c_stages);
-        
+                    pipes, c_stages, kid_pids);
+
+        /*close all extra file_descriptors*/
         free(out_flag);
         free(argv);
-        /*close all extra file_descriptors*/
         close(pip[1]);
         close(fdout);
         close(*read_pipe);
@@ -192,48 +239,59 @@ int redirect_and_pipe(char **stages, int **size_of, int *pipes, int c_stages,
     }
 }
 
-
 int forker(int write, int *read_pipe, char **stages, int *out_flag, int fdout, 
-            char **argv, int *pipes, int c_stages ) {
-
+char **argv, int *pipes, int c_stages, int **kid_pids) {
+    
     pid_t pid = fork();
-    
-    if(pid == -1) {
+    int bad_ret = 0;
+
+    if (pid == -1) {
         perror("Fork Error");
-        return -1;
+        exit(EXIT_FAILURE);
     }
-    
-    /*if child*/
-    else if(pid == 0) {
-        
-        if(!(*read_pipe == STDIN_FILENO)) {
+    if (pid > 0) {
+        kid_pids[c_stages] = &pid;
+    }
+    /* if child */
+    else if (pid == 0) {
+        if (!(*read_pipe == STDIN_FILENO)) {
             dup2(*read_pipe, STDIN_FILENO);
             close(*read_pipe);
         }
-        if(*out_flag == 1) {
+        if (*out_flag == 1) {
             dup2(fdout, STDOUT_FILENO);
             close(fdout);
             *out_flag = 0;
         }
-        if(c_stages != (*pipes)) {
+        if (c_stages != (*pipes)) {
             if(!(write == STDOUT_FILENO)) {
                 dup2(write, STDOUT_FILENO);
                 close(write);
             }
         }
-       
         execvp(stages[0], argv);
-
-        printf("%s: ", argv[0]);
-        fflush(stdout);
+        bad_ret = -1;
+        fprintf(stderr, "%s: ", argv[0]);
         perror(NULL);
+        exit(1);
     }
-    
+
+    if (bad_ret == -1) {
+        return -1;
+    }
     return pid;
 }
+
+
+void freetp(char ***stages, int **size_of, int *pipes, int *read_pipe, int ff) {
     
-void freetp(char ***stages, int **size_of, int *pipes, int *read_pipe) {
-        
+    if(ff == 0){
+        free(stages);
+        free(size_of);
+        free(read_pipe);
+        free(pipes);
+    }
+    else{    
         int i = 0;
         int x = 0;
         for(i = 0; i <= *pipes; i++) {
@@ -245,13 +303,32 @@ void freetp(char ***stages, int **size_of, int *pipes, int *read_pipe) {
         free(stages);
 
         for(i = 0; i <= *pipes; i++) {
-            free((size_of[i]));
+         free((size_of[i]));
         }
         free(size_of);
-        
-        free(pipes);
-        
+
         free(read_pipe);
-}
     
+        free(pipes);
+    }
+}
+
+void freetp2(char ***stages, int **size_of, int *pipes) {
+        
+    int i = 0;
+    int x = 0;
+    for(i = 0; i <= *pipes; i++) {
+        for(x = 0; x < (*(size_of[i])); x++) {
+            free(stages[i][x]);
+        }
+        free(stages[i]);
+    }
+
+    for(i = 0; i <= *pipes; i++) {
+        free((size_of[i]));
+    }
+    
+}
+
+
 

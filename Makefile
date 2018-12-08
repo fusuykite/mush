@@ -1,4 +1,4 @@
-CC = clang
+C = clang
 CFLAGS = -Wall -pedantic
 LDFLAGS = 
 DEBUG = -g

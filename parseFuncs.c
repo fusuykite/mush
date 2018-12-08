@@ -1,21 +1,26 @@
-//CREATED BY YUSUF BAHADUR AND ANDREW YAN
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <unistd.h>
 #include "parse.h"
 
 /* Read in the command line argument and error check 
- * return 0 on success and 1 on error */
+ *  * return 0 on success and 1 on error */
 int read_cmd_line(char *cmd_line) {
     int i = 0;
     int empty_ct = 0;
-    if (fgets(cmd_line, MAX_CMD_LEN, stdin) == NULL) {
-        //fprintf(stderr, "%s", "invalid null command\n");
-        printf("HAHA\n");
+
+    /* Retrieve the line */
+    fgets(cmd_line, MAX_CMD_LEN, stdin);
+    
+    /* Check if CTRL + D is pressed */
+    if (feof(stdin)) {
+        printf("\n");
+        fflush(stdout);
         exit(EXIT_FAILURE);
     }
+
     /* Check the length of the command line */
     if (cmd_line[MAX_CMD_LEN - 1] != '\0') {
         fprintf(stderr, "%s", "Command Line too Long\n");
@@ -30,15 +35,16 @@ int read_cmd_line(char *cmd_line) {
            empty_ct++; 
         }
     }
+    
     if (empty_ct == 0) {
-        fprintf(stderr, "%s", "invalid null command\n");
         return 1;
     }
+
     return 0;
 }
 
 /* Takes the command line and tokenizes the arguments 
- * stores the arguments within the token_list array */
+ *  * stores the arguments within the token_list array */
 int token_args(char **token_list, char *cmd_line, int **arg_num, int **pipes) {
     char *token = strtok(cmd_line, " ");
     
@@ -494,5 +500,3 @@ void err_usage_cmd() {
 void too_many_args() {
     fprintf(stderr, "%s", "too many arguments\n");
 }
-
-

@@ -1,4 +1,5 @@
-//CREATED BY YUSUF BAHADUR AND ANDREW YAN
+#ifndef __MYPARSE__
+#define __MYPARSE__
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -9,6 +10,7 @@
 #define MAX_CMD_LEN 512
 #define MAX_CMD_PIPE 10
 #define MAX_CMD_ARG 10
+#define MAX_ARG_PER_STAGE 14
 
 /* ASCII defines */
 #define ASCII_PIPE 124
@@ -31,11 +33,11 @@ int err_check_input(char **token_list, int num_arg, int num_pipe);
 int print_stages(char **token_list, int num_pipe);
 
 /* Another set up in order to print the stages probably could have
- * just combined thsi one and print stages */
+ *  * just combined thsi one and print stages */
 int print_individual(char *token_arg, int idx, int num_pipe);
 
 /* Function to print the information for the
- * first and last stage for the piping */
+ *  * first and last stage for the piping */
 void print_first_last(char *token_arg, int num_pipe, int flFlag);
 
 /* Function to print the information for the middle stages for piping */
@@ -62,4 +64,5 @@ void too_many_args();
 
 
 
+#endif /* __MYPARSE__ */
 
