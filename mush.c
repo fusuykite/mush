@@ -19,11 +19,11 @@ int main(int argc, char *argv[]) {
     int *pipes = calloc(1, sizeof(int));
     struct sigaction sa_interrupt;
 
-    int *pipe_in[1];
-    int *pipe_out[1];
+    int *read_pipe = calloc(1 , sizeof(int));
 
     *arg_count = 0;
     *pipes = 0;
+    *read_pipe = 0;
 
     /* Set up the signals */
     memset(&sa_interrupt, 0, sizeof(sa_interrupt));
@@ -45,15 +45,14 @@ int main(int argc, char *argv[]) {
             
             /* Breaks up based on spaces to err check */
             if (token_args(arg_token, cmd_line, &arg_count, &pipes) == 0) {
-
                 if (err_check_input(arg_token, *arg_count, *pipes) == 0) {
                     make_stages(stages, cmd_line_cpy, stage_arg);
                     if (cd_checker(stages[0], *stage_arg[0], *pipes) == 0) {
                         for (i = 0; i <= *pipes; i++) {
-                            if (fork_test(stages[i], *stage_arg[i], 
-                            kid_pids, i, pipe_in, pipe_out, *pipes + 1) != 0) {
+                            if (redirect_and_pipe(stages[i], stage_arg, pipes, 
+                            i, read_pipe, kid_pids) == -1) {
                                 break;
-                            }   
+                            }
                         }
                         wait_kids(kid_pids, i);
                     }
@@ -62,12 +61,13 @@ int main(int argc, char *argv[]) {
         }
         
         /* Shell resets itself */
-        *arg_count = 0;
-        *pipes = 0;
         memset(arg_token, 0, MAX_CMD_LEN);
         memset(cmd_line, 0, MAX_CMD_LEN);
         memset(cmd_line_cpy, 0, MAX_CMD_LEN);
         fflush(stdout);
+        /*freetp(stages, stage_arg, pipes, read_pipe);*/
+        *arg_count = 0;
+        *pipes = 0;
     }
     free(pipes);
     free(arg_count);

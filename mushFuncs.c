@@ -9,8 +9,6 @@ void interrupt_handler(int signum) {
     fflush(stdout);
 }
 
-void pipes(char **token_list, int stage) {
-}
 	
 /* Changing directory */
 int change_directory(char *path) {
@@ -24,6 +22,7 @@ int change_directory(char *path) {
     }
     return 0;
 }
+
 int make_stages(char ***stages, char *cmd_line, int **size_of){
     int s = 0;
     int a = 0;
@@ -60,42 +59,6 @@ int make_stages(char ***stages, char *cmd_line, int **size_of){
     return 0;
 }
 
-/* Takes the strings for each stage and number of arguments */
-int redirect(char **stages, int num_args, int pflag) {
-    int i = 0;
-    int fdin;
-    int fdout;
-    for (i = 0; i < num_args; i++) {
-
-        /* Check if '>' or '<' is encountered */
-        if (pflag == 0) {
-            if (!(strcmp(stages[i], ">"))) {
-
-                /* Call open on the arg after '>' */
-                if ((fdout = open(stages[i + 1], O_RDWR | 
-                    O_CREAT | O_TRUNC)) == -1) {
-                    fprintf(stderr, "%s: ", stages[i + 1]);
-                    perror(NULL);
-                    return 1;
-                } 
-                dup2(fdout, STDOUT_FILENO);
-                close(fdout);
-            }
-            else if (!(strcmp(stages[i], "<"))) {
-
-                /* Call open on the arg after '<' */
-                if ((fdin = open(stages[i + 1], O_RDWR)) == -1) {
-                    fprintf(stderr, "%s: ", stages[i + 1]);
-                    perror(NULL);
-                    return 1;
-                }
-                dup2(fdin, STDIN_FILENO);
-                close(fdin);
-            }
-        }
-    }
-    return 0;
-}
 
 /* Checks if the first argument is cd 
  * returns 1 on error of if the directory is changed
@@ -125,17 +88,49 @@ int cd_checker(char **stages, int num_arg, int num_pipe) {
     return 0;
 }
 
-int fork_test(char **stages, int num_arg, int **kid_pids, int cur_stage,
-int **in_pipe, int **out_pipe, int num_stages) {
-    int i = 0;
-    int idx_ct = 0;
-    int argc = num_arg;
-    int wait_int;
-    char *cmd = stages[0];
-    char **argv = NULL;
-    pid_t fork_result;
-    int pipe_fd[2];
     
+int wait_kids(int **kid_pids, int num_kids) {
+    int i = 0;
+    int wait_int;
+    for (i = 0; i < num_kids; i++) {
+        waitpid(*kid_pids[i], &wait_int, 0);
+        if (wait_int != 0) {
+            /* Do something */
+        }
+        else {
+            /* Do something */
+        }
+    }
+    return 0;
+}
+
+int redirect_and_pipe(char **stages, int **size_of, int *pipes, int c_stages, 
+    int *read_pipe, int **kid_pids) {
+    
+    int i = 0;    
+    int fd = 0;                                                               
+    int fdout;
+    int pip[2];
+    
+    int ret = 0;
+    int *out_flag = calloc(1, sizeof(int));  
+    *out_flag = 0;
+    int idx_ct = 0;
+    int argc;
+    char **argv = NULL;
+    int num_arg;
+    int saved_stdin;
+    int saved_stdout;
+
+    /*save the original fd*/
+    saved_stdin = dup(0);
+    saved_stdout = dup(1);
+    
+    /*calculate the number of args for given stage */
+    num_arg = *(size_of[c_stages]);
+    argc = num_arg;
+
+    /*CODE TO SET UP ARGS WITHOUT > < "*/
     for (i = 0; i < num_arg; i++) {
         if (!strcmp(stages[i], "<")) {
             argc = argc - 2;
@@ -162,50 +157,154 @@ int **in_pipe, int **out_pipe, int num_stages) {
             }
         }
         argv[argc] = NULL;
-    }    
+    } 
 
-    pipe(pipe_fd);
-    
-    if ((fork_result = fork()) == -1) {
-        fprintf(stderr, "%s", "Fork has failed\n");
-        exit(EXIT_FAILURE);
+
+    /*CODE TO SET UP REDIRECTION */    
+    if(c_stages == 0 || c_stages == *pipes) {
+
+        for(i = 0; i < num_arg; i++) {
+
+            if((strcmp(stages[i], ">")) == 0) {
+
+                if((fdout = open(stages[i+1], O_RDWR | O_CREAT | O_TRUNC, 0666
+                )) == -1) {
+                    fprintf(stderr, "%s: ", stages[i + 1]);
+                    perror(NULL);
+                    return -1;
+                }
+
+                *out_flag = 1;
+            }
+            
+            if((strcmp(stages[i], "<")) == 0) {
+
+                if((*read_pipe = open(stages[i+1], O_RDONLY, 0666)) == -1) {
+                    fprintf(stderr, "%s: ", stages[i + 1]);
+                    perror(NULL);
+                    return -1;
+                }
+
+            }
+        }
     }
 
-    else if (fork_result == 0) {
-        if (redirect(stages, num_arg, 0) == 0) {
-            execvp(cmd, argv);
-            fprintf(stderr, "%s: ", stages[0]);
-            perror(NULL);
+    /*CODE TO BEGIN PIPING*/
+    if(c_stages <= (*pipes)){
+ 
+        if(pipe(pip) == -1) {
+            perror("Pipe Error");
+            return -1;
+        }
+        
+        /*function to start forking*/        
+        
+        ret = forker(pip[1], read_pipe, stages, out_flag, fdout, argv, 
+                    pipes, c_stages, kid_pids);
+
+        /*close all extra file_descriptors*/
+        close(pip[1]);
+        close(fdout);
+        close(*read_pipe);
+
+        /*restore original file descriptors*/        
+        dup2(saved_stdin, 0);                                               
+        dup2(saved_stdout, 1); 
+        
+        /*close saved input output*/
+        close(saved_stdin);
+        close(saved_stdout);
+
+        if(ret == -1) {
+            return -1;
+        }
+    
+        /*if not last pipe set *read_pipe to current pipe*/
+
+        if(c_stages == *pipes) {
             return 1;
         }
-    }
-
-    else {
-        kid_pids[cur_stage] = &fork_result;
-    }
-    free(argv);
-    return 0;
-}
     
-int wait_kids(int **kid_pids, int num_kids) {
-    int i = 0;
-    int wait_int;
-    for (i = 0; i < num_kids; i++) {
-        waitpid(*kid_pids[i], &wait_int, 0);
-        if (wait_int != 0) {
-            fprintf(stderr, "%s\n", "Process unsucessful");
+        else { 
+            *read_pipe = pip[0];
+            return 1;
         }
-        else {
-            printf("Proccess successful\n");
-            fflush(stdout);
-        }
+
     }
-    return 0;
+    /*error hit*/
+    else {
+        return -1;
+    }
+}
+
+int forker(int write, int *read_pipe, char **stages, int *out_flag, int fdout, 
+char **argv, int *pipes, int c_stages, int **kid_pids) {
+    
+    pid_t pid = fork();
+    int bad_ret = 0;
+
+    if (pid == -1) {
+        perror("Fork Error");
+        exit(EXIT_FAILURE);
+    }
+    if (pid > 0) {
+        kid_pids[c_stages] = &pid;
+    }
+    /* if child */
+    else if (pid == 0) {
+        if (!(*read_pipe == STDIN_FILENO)) {
+            dup2(*read_pipe, STDIN_FILENO);
+            close(*read_pipe);
+        }
+        if (*out_flag == 1) {
+            dup2(fdout, STDOUT_FILENO);
+            close(fdout);
+            *out_flag = 0;
+        }
+        if (c_stages != (*pipes)) {
+            if(!(write == STDOUT_FILENO)) {
+                dup2(write, STDOUT_FILENO);
+                close(write);
+            }
+        }
+        execvp(stages[0], argv);
+        bad_ret = -1;
+        fprintf(stderr, "%s: ", argv[0]);
+        perror(NULL);
+        exit(1);
+    }
+
+    if (bad_ret == -1) {
+        return -1;
+    }
+    return pid;
 }
 
 
+void freetp(char ***stages, int **size_of, int *pipes, int *read_pipe) {
+        
+    int i = 0;
+    int x = 0;
+    for(i = 0; i <= *pipes; i++) {
+        for(x = 0; x < (*(size_of[i])); x++) {
+            free(stages[i][x]);
+        }
+        free(stages[i]);
+    }
+    free(stages);
 
+    for(i = 0; i <= *pipes; i++) {
+        free((size_of[i]));
+    }
+    free(size_of);
 
+    free(read_pipe);
+    
+    free(pipes);
+}
 
+int alloc_stages(char ***stages, int **size_of) {
+    return 0;
+}
 
 
