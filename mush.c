@@ -1,4 +1,4 @@
-//CREATED BY YUSUF BAHADUR AND ANDREW YAN
+/*CREATED BY YUSUF BAHADUR AND ANDREW YAN*/
 
 #include "parse.h"
 #include "mush.h"
