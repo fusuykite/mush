@@ -106,7 +106,7 @@ int wait_kids(int **kid_pids, int num_kids) {
 
 int redirect_and_pipe(char **stages, int **size_of, int *pipes, int c_stages, 
     int *read_pipe, int **kid_pids) {
-    
+   
     int i = 0;    
     int fd = 0;                                                               
     int fdout = 1;
@@ -241,10 +241,8 @@ int redirect_and_pipe(char **stages, int **size_of, int *pipes, int c_stages,
 
 int forker(int write, int *read_pipe, char **stages, int *out_flag, int fdout, 
 char **argv, int *pipes, int c_stages, int **kid_pids) {
-    
     pid_t pid = fork();
     int bad_ret = 0;
-
     if (pid == -1) {
         perror("Fork Error");
         exit(EXIT_FAILURE);
